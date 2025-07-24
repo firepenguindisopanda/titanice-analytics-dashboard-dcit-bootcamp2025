@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Titanic Analytics Dashboard</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --success-color: #059669;
+            --danger-color: #dc2626;
+            --warning-color: #d97706;
+            --info-color: #0891b2;
+            --dark-color: #1f2937;
+            --light-color: #f8fafc;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .navbar {
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: 20px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover::before {
+            transform: scale(1.5);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 1rem 0;
+        }
+
+        .prediction-form {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+
+        .btn-custom {
+            border-radius: 25px;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section-title {
+            color: white;
+            font-size: 2rem;
+            font-weight: bold;
+            text-align: center;
+            margin: 3rem 0 2rem 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .prediction-result {
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .survived {
+            background: linear-gradient(135deg, var(--success-color), #065f46);
+            color: white;
+        }
+
+        .not-survived {
+            background: linear-gradient(135deg, var(--danger-color), #991b1b);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="#">
+                <i class="bi bi-ship me-2"></i>Titanic Analytics
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#overview">Overview</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#analytics">Analytics</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#prediction">Prediction</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#optimization">Optimization</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid" style="padding-top: 100px;">
+        <!-- Overview Section -->
+        <section id="overview">
+            <h2 class="section-title">Dataset Overview</h2>
+            <div class="container">
+                <div class="row" id="stats-cards">
+                    <!-- Stats cards will be populated by JavaScript -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Analytics Section -->
+        <section id="analytics">
+            <h2 class="section-title">Data Analytics</h2>
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-6 mb-4">
+                        <div class="card fade-in">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Survival by Class</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="survivalByClassChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 mb-4">
+                        <div class="card fade-in">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Survival by Gender</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="survivalByGenderChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-lg-6 mb-4">
+                        <div class="card fade-in">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Age Distribution</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="ageDistributionChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 mb-4">
+                        <div class="card fade-in">
+                            <div class="card-header bg-warning text-white">
+                                <h5 class="mb-0"><i class="bi bi-scatter-chart me-2"></i>Clustering Analysis</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="clusteringChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-12 mb-4">
+                        <div class="card fade-in">
+                            <div class="card-header bg-secondary text-white">
+                                <h5 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Model Performance</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="modelPerformanceChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Prediction Section -->
+        <section id="prediction">
+            <h2 class="section-title">Survival Prediction</h2>
+            <div class="container">
+                <div class="row justify-content-center">
+                    <div class="col-lg-8">
+                        <div class="prediction-form">
+                            <h4 class="text-center mb-4">Predict Passenger Survival</h4>
+                            <form id="predictionForm">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="pclass" class="form-label">Passenger Class</label>
+                                        <select class="form-select" id="pclass" required>
+                                            <option value="">Select Class</option>
+                                            <option value="1">First Class</option>
+                                            <option value="2">Second Class</option>
+                                            <option value="3">Third Class</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="sex" class="form-label">Gender</label>
+                                        <select class="form-select" id="sex" required>
+                                            <option value="">Select Gender</option>
+                                            <option value="male">Male</option>
+                                            <option value="female">Female</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="age" class="form-label">Age</label>
+                                        <input type="number" class="form-control" id="age" min="0" max="100" required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="fare" class="form-label">Fare</label>
+                                        <input type="number" class="form-control" id="fare" min="0" step="0.01" required>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label for="sibsp" class="form-label">Siblings/Spouses</label>
+                                        <input type="number" class="form-control" id="sibsp" min="0" max="8" value="0">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label for="parch" class="form-label">Parents/Children</label>
+                                        <input type="number" class="form-control" id="parch" min="0" max="6" value="0">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label for="embarked" class="form-label">Embarked</label>
+                                        <select class="form-select" id="embarked" required>
+                                            <option value="">Select Port</option>
+                                            <option value="S">Southampton</option>
+                                            <option value="C">Cherbourg</option>
+                                            <option value="Q">Queenstown</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="text-center">
+                                    <button type="submit" class="btn btn-primary btn-custom">
+                                        <i class="bi bi-calculator me-2"></i>Predict Survival
+                                    </button>
+                                </div>
+                            </form>
+                            <div id="predictionResult"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Optimization Section -->
+        <section id="optimization">
+            <h2 class="section-title">Survival Optimization</h2>
+            <div class="container">
+                <div class="row justify-content-center">
+                    <div class="col-lg-8">
+                        <div class="card fade-in">
+                            <div class="card-header bg-danger text-white">
+                                <h5 class="mb-0"><i class="bi bi-bullseye me-2"></i>Optimal Survival Factors</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="text-center mb-3">
+                                    <button class="btn btn-danger btn-custom" onclick="loadOptimization()">
+                                        <i class="bi bi-gear me-2"></i>Calculate Optimal Factors
+                                    </button>
+                                </div>
+                                <div id="optimizationResult"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Global variables for charts
+        let charts = {};
+
+        // Load data when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDescriptiveStats();
+            loadDiagnosticAnalysis();
+            loadModelPerformance();
+            loadClustering();
+        });
+
+        // Load descriptive statistics
+        async function loadDescriptiveStats() {
+            try {
+                const response = await fetch('/api/descriptive-stats');
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                // Create stats cards
+                const statsContainer = document.getElementById('stats-cards');
+                statsContainer.innerHTML = `
+                    <div class="col-md-3 mb-3">
+                        <div class="stat-card">
+                            <div class="stat-value">${data.total_passengers}</div>
+                            <div class="stat-label">Total Passengers</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="stat-card">
+                            <div class="stat-value">${(data.survival_rate * 100).toFixed(1)}%</div>
+                            <div class="stat-label">Survival Rate</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="stat-card">
+                            <div class="stat-value">${data.age_stats.mean.toFixed(1)}</div>
+                            <div class="stat-label">Average Age</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="stat-card">
+                            <div class="stat-value">$${data.fare_stats.mean.toFixed(0)}</div>
+                            <div class="stat-label">Average Fare</div>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading descriptive stats:', error);
+            }
+        }
+
+        // Load diagnostic analysis and create charts
+        async function loadDiagnosticAnalysis() {
+            try {
+                const response = await fetch('/api/diagnostic-analysis');
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                // Survival by Class Chart
+                createSurvivalByClassChart(data.survival_by_class);
+
+                // Survival by Gender Chart
+                createSurvivalByGenderChart(data.survival_by_sex);
+
+            } catch (error) {
+                console.error('Error loading diagnostic analysis:', error);
+            }
+        }
+
+        // Load model performance
+        async function loadModelPerformance() {
+            try {
+                const response = await fetch('/api/model-performance');
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                createModelPerformanceChart(data);
+            } catch (error) {
+                console.error('Error loading model performance:', error);
+            }
+        }
+
+        // Load clustering analysis
+        async function loadClustering() {
+            try {
+                const response = await fetch('/api/clustering');
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                createClusteringChart(data.cluster_analysis);
+            } catch (error) {
+                console.error('Error loading clustering:', error);
+            }
+        }
+
+        // Create Survival by Class Chart
+        function createSurvivalByClassChart(data) {
+            const ctx = document.getElementById('survivalByClassChart').getContext('2d');
+
+            charts.survivalByClass = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['First Class', 'Second Class', 'Third Class'],
+                    datasets: [{
+                        data: [
+                            (data.mean[1] * 100).toFixed(1),
+                            (data.mean[2] * 100).toFixed(1),
+                            (data.mean[3] * 100).toFixed(1)
+                        ],
+                        backgroundColor: ['#2563eb', '#059669', '#dc2626'],
+                        borderWidth: 3,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.label + ': ' + context.parsed + '% survival rate';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Create Survival by Gender Chart
+        function createSurvivalByGenderChart(data) {
+            const ctx = document.getElementById('survivalByGenderChart').getContext('2d');
+
+            charts.survivalByGender = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Female', 'Male'],
+                    datasets: [{
+                        label: 'Survival Rate (%)',
+                        data: [
+                            (data.mean.female * 100).toFixed(1),
+                            (data.mean.male * 100).toFixed(1)
+                        ],
+                        backgroundColor: ['#ec4899', '#3b82f6'],
+                        borderRadius: 10,
+                        borderSkipped: false,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
+        // Create Model Performance Chart
+        function createModelPerformanceChart(data) {
+            const ctx = document.getElementById('modelPerformanceChart').getContext('2d');
+
+            const models = Object.keys(data);
+            const accuracies = models.map(model => (data[model].accuracy * 100).toFixed(1));
+
+            charts.modelPerformance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: models.map(m => m.replace('_', ' ').toUpperCase()),
+                    datasets: [{
+                        label: 'Accuracy (%)',
+                        data: accuracies,
+                        backgroundColor: ['#8b5cf6', '#06b6d4'],
+                        borderRadius: 8,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
+        // Create Clustering Chart
+        function createClusteringChart(clusterData) {
+            const ctx = document.getElementById('clusteringChart').getContext('2d');
+
+            const clusters = Object.keys(clusterData);
+            const survivalRates = clusters.map(cluster => 
+                (clusterData[cluster].survival_rate * 100).toFixed(1)
+            );
+            const sizes = clusters.map(cluster => clusterData[cluster].size);
+
+            charts.clustering = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: clusters.map((cluster, index) => ({
+                        label: `Cluster ${index + 1}`,
+                        data: [{
+                            x: clusterData[cluster].avg_age,
+                            y: clusterData[cluster].survival_rate * 100,
+                            r: Math.sqrt(clusterData[cluster].size) * 3
+                        }],
+                        backgroundColor: ['#ef4444', '#10b981', '#f59e0b'][index],
+                        borderColor: ['#dc2626', '#059669', '#d97706'][index],
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Average Age'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Survival Rate (%)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const cluster = context.datasetIndex + 1;
+                                    return `Cluster ${cluster}: ${context.parsed.y.toFixed(1)}% survival, Age: ${context.parsed.x.toFixed(1)}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Age Distribution Chart (simulated data)
+        function createAgeDistributionChart() {
+            const ctx = document.getElementById('ageDistributionChart').getContext('2d');
+
+            // Simulated age distribution data
+            const ageGroups = ['0-10', '11-20', '21-30', '31-40', '41-50', '51-60', '60+'];
+            const counts = [5, 15, 25, 20, 15, 10, 10]; // Simulated counts
+
+            charts.ageDistribution = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ageGroups,
+                    datasets: [{
+                        label: 'Number of Passengers',
+                        data: counts,
+                        borderColor: '#06b6d4',
+                        backgroundColor: 'rgba(6, 182, 212, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointBackgroundColor: '#06b6d4',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Number of Passengers'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Age Groups'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialize age distribution chart after page load
+        setTimeout(createAgeDistributionChart, 1000);
+
+        // Prediction form handler
+        document.getElementById('predictionForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const formData = {
+                Pclass: parseInt(document.getElementById('pclass').value),
+                Sex: document.getElementById('sex').value,
+                Age: parseFloat(document.getElementById('age').value),
+                SibSp: parseInt(document.getElementById('sibsp').value),
+                Parch: parseInt(document.getElementById('parch').value),
+                Fare: parseFloat(document.getElementById('fare').value),
+                Embarked: document.getElementById('embarked').value
+            };
+
+            try {
+                const response = await fetch('/api/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+
+                displayPredictionResult(result);
+            } catch (error) {
+                console.error('Error making prediction:', error);
+                document.getElementById('predictionResult').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Error: ${error.message}
+                    </div>
+                `;
+            }
+        });
+
+        // Display prediction result
+        function displayPredictionResult(result) {
+            const rfResult = result.random_forest;
+            const lrResult = result.logistic_regression;
+
+            const avgProbability = (rfResult.survival_probability + lrResult.survival_probability) / 2;
+            const prediction = avgProbability > 0.5 ? 'Survived' : 'Not Survived';
+            const resultClass = prediction === 'Survived' ? 'survived' : 'not-survived';
+
+            document.getElementById('predictionResult').innerHTML = `
+                <div class="prediction-result ${resultClass}">
+                    <h4><i class="bi bi-${prediction === 'Survived' ? 'check-circle' : 'x-circle'} me-2"></i>${prediction}</h4>
+                    <p class="mb-2">Average Survival Probability: <strong>${(avgProbability * 100).toFixed(1)}%</strong></p>
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h6>Random Forest</h6>
+                            <p>Survival: ${(rfResult.survival_probability * 100).toFixed(1)}%</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Logistic Regression</h6>
+                            <p>Survival: ${(lrResult.survival_probability * 100).toFixed(1)}%</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Load optimization results
+        async function loadOptimization() {
+            try {
+                document.getElementById('optimizationResult').innerHTML = `
+                    <div class="text-center">
+                        <div class="loading"></div>
+                        <p class="mt-2">Calculating optimal factors...</p>
+                    </div>
+                `;
+
+                const response = await fetch('/api/optimization');
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                document.getElementById('optimizationResult').innerHTML = `
+                    <div class="alert alert-success">
+                        <h5><i class="bi bi-trophy me-2"></i>Optimal Passenger Profile</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Class:</strong> ${data.pclass}</p>
+                                <p><strong>Gender:</strong> ${data.sex}</p>
+                                <p><strong>Age:</strong> ${data.age} years</p>
+                                <p><strong>Fare:</strong> ${data.fare}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Siblings/Spouses:</strong> ${data.sibsp}</p>
+                                <p><strong>Parents/Children:</strong> ${data.parch}</p>
+                                <p><strong>Embarked:</strong> ${data.embarked}</p>
+                                <p><strong>Max Survival Probability:</strong> ${(data.max_survival_probability * 100).toFixed(1)}%</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading optimization:', error);
+                document.getElementById('optimizationResult').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Error: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Add fade-in animation to elements when they come into view
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('fade-in');
+                }
+            });
+        }, observerOptions);
+
+        // Observe all cards
+        document.querySelectorAll('.card').forEach(card => {
+            observer.observe(card);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Data Dashboard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="https://code.highcharts.com/modules/exporting.js"></script>
+    <script src="https://code.highcharts.com/modules/export-data.js"></script>
+    <script src="https://code.highcharts.com/modules/accessibility.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1 class="center-align">Movie Data Dashboard</h1>
+        <div class="row">
+            <div class="col s12 m6">
+                <div id="genre-distribution" style="height: 400px;"></div>
+            </div>
+            <div class="col s12 m6">
+                <div id="rating-distribution" style="height: 400px;"></div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col s12">
+                <div id="time-series-chart" style="height: 400px;"></div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col s12 m6">
+                <div id="top-rated" style="height: 400px;"></div>
+            </div>
+            <div class="col s12 m6">
+                <div class="input-field">
+                    <input id="movie-title" type="text" class="validate">
+                    <label for="movie-title">Enter Movie Title</label>
+                </div>
+                <button class="btn waves-effect waves-light" onclick="getRecommendations()">Get Recommendations</button>
+                <ul id="recommendations" class="collection with-header">
+                    <li class="collection-header"><h5>Recommended Movies</h5></li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col s12">
+                <h5>Predict Movie Rating</h5>
+                <form id="predict-form">
+                    <div class="row">
+                        <div class="col s12 m6">
+                            <div class="input-field">
+                                <select id="predict-genre" class="validate">
+                                    <option value="" disabled selected>Choose Genre</option>
+                                </select>
+                                <label for="predict-genre">Genre</label>
+                            </div>
+                            <div class="input-field">
+                                <input id="predict-runtime" type="text" class="validate">
+                                <label for="predict-runtime">Runtime (minutes)</label>
+                            </div>
+                            <div class="input-field">
+                                <input id="predict-director" type="text" class="validate">
+                                <label for="predict-director">Director</label>
+                            </div>
+                        </div>
+                        <div class="col s12 m6">
+                            <div class="input-field">
+                                <input id="predict-star1" type="text" class="validate">
+                                <label for="predict-star1">Star 1</label>
+                            </div>
+                            <div class="input-field">
+                                <input id="predict-star2" type="text" class="validate">
+                                <label for="predict-star2">Star 2 (optional)</label>
+                            </div>
+                            <div class="input-field">
+                                <input id="predict-star3" type="text" class="validate">
+                                <label for="predict-star3">Star 3 (optional)</label>
+                            </div>
+                            <div class="input-field">
+                                <input id="predict-star4" type="text" class="validate">
+                                <label for="predict-star4">Star 4 (optional)</label>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn waves-effect waves-light" type="button" onclick="predictRating()">Predict Rating</button>
+                </form>
+                <div id="predicted-rating" style="font-size: 48px; text-align: center; margin-top: 20px;">0</div>
+            </div>
+        </div>
+    </div>
+    <script>
+        function fetchAndDisplayData() {
+            fetch('/api/genre_distribution')
+                .then(response => response.json())
+                .then(data => {
+                    Highcharts.chart('genre-distribution', {
+                        chart: { type: 'column' },
+                        title: { text: 'Genre Distribution' },
+                        xAxis: { categories: Object.keys(data) },
+                        yAxis: { title: { text: 'Number of Movies' } },
+                        series: [{ name: 'Genres', data: Object.values(data) }]
+                    });
+                });
+
+            fetch('/api/rating_distribution')
+                .then(response => response.json())
+                .then(data => {
+                    Highcharts.chart('rating-distribution', {
+                        chart: { type: 'column' },
+                        title: { text: 'IMDB Rating Distribution' },
+                        xAxis: { title: { text: 'IMDB Rating' } },
+                        yAxis: { title: { text: 'Number of Movies' } },
+                        series: [{ name: 'Ratings', data: Object.values(data) }]
+                    });
+                });
+
+            fetch('/api/top_rated')
+                .then(response => response.json())
+                .then(data => {
+                    Highcharts.chart('top-rated', {
+                        chart: { type: 'bar' },
+                        title: { text: 'Top Rated Movies' },
+                        xAxis: { categories: data.map(movie => movie.Series_Title) },
+                        yAxis: { title: { text: 'IMDB Rating' } },
+                        series: [{ name: 'Ratings', data: data.map(movie => movie.IMDB_Rating) }]
+                    });
+                });
+        }
+
+        function getRecommendations() {
+            const title = document.getElementById('movie-title').value;
+            fetch(`/api/recommendations/${title}`)
+                .then(response => response.json())
+                .then(data => {
+                    const recommendationsList = document.getElementById('recommendations');
+                    recommendationsList.innerHTML = '<li class="collection-header"><h5>Recommended Movies</h5></li>';
+                    data.forEach(movie => {
+                        const listItem = document.createElement('li');
+                        listItem.className = 'collection-item avatar';
+                        const poster = document.createElement('img');
+                        poster.src = movie.Poster_Link;
+                        poster.className = 'circle';
+                        const title = document.createElement('span');
+                        title.className = 'title';
+                        title.textContent = movie.Series_Title;
+                        const rating = document.createElement('p');
+                        rating.textContent = `IMDB Rating: ${movie.IMDB_Rating}`;
+                        listItem.appendChild(poster);
+                        listItem.appendChild(title);
+                        listItem.appendChild(rating);
+                        recommendationsList.appendChild(listItem);
+                    });
+                })
+                .catch(error => {
+                    const recommendationsList = document.getElementById('recommendations');
+                    recommendationsList.innerHTML = '<li class="collection-header"><h5>Recommended Movies</h5></li>';
+                    const errorMessage = document.createElement('li');
+                    errorMessage.className = 'collection-item';
+                    errorMessage.textContent = 'No recommendations found or error occurred. Please try again.';
+                    recommendationsList.appendChild(errorMessage);
+                });
+        }
+
+        function predictRating() {
+            const movieFeatures = {
+                'Genre': document.getElementById('predict-genre').value,
+                'Runtime': parseInt(document.getElementById('predict-runtime').value),
+                'Director': document.getElementById('predict-director').value,
+                'Star1': document.getElementById('predict-star1').value,
+                'Star2': document.getElementById('predict-star2').value,
+                'Star3': document.getElementById('predict-star3').value,
+                'Star4': document.getElementById('predict-star4').value
+            };
+
+            fetch('/api/predict_rating', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(movieFeatures)
+            })
+            .then(response => response.json())
+            .then(data => {
+                animateValue("predicted-rating", 0, data.predicted_rating, 200);
+            })
+            .catch(error => {
+                document.getElementById('predicted-rating').innerText = 'Error predicting rating. Please try again.';
+            });
+        }
+
+        function fetchTimeSeriesData() {
+            fetch('/api/time_series_analysis')
+                .then(response => response.json())
+                .then(data => {
+                    Highcharts.chart('time-series-chart', {
+                        chart: {
+                            type: 'line'
+                        },
+                        title: {
+                            text: 'Total Gross Earnings Over Time'
+                        },
+                        xAxis: {
+                            type: 'datetime',
+                            title: {
+                                text: 'Year'
+                            }
+                        },
+                        yAxis: {
+                            title: {
+                                text: 'Total Gross Earnings'
+                            }
+                        },
+                        series: [{
+                            name: 'Gross Earnings',
+                            data: data
+                        }]
+                    });
+                });
+        }
+
+        function animateValue(id, start, end, duration) {
+            const range = end - start;
+            const minTimer = 50;
+            const stepTime = Math.abs(Math.floor(duration / range));
+
+            const element = document.getElementById(id);
+            let current = start;
+            let increment = end > start ? 0.1 : -0.1;
+            let timer = setInterval(() => {
+                current += increment;
+                element.innerText = current.toFixed(1);
+                if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
+                    clearInterval(timer);
+                }
+            }, Math.max(stepTime, minTimer));
+        }
+
+        $(document).ready(function() {
+            fetch('/api/movie_titles')
+                .then(response => response.json())
+                .then(data => {
+                    $("#movie-title").autocomplete({
+                        source: data,
+                        minLength: 2
+                    });
+                });
+
+            fetch('/api/genres')
+                .then(response => response.json())
+                .then(data => {
+                    const genreSelect = document.getElementById('predict-genre');
+                    data.forEach(genre => {
+                        const option = document.createElement('option');
+                        option.value = genre;
+                        option.textContent = genre;
+                        genreSelect.appendChild(option);
+                    });
+                    M.FormSelect.init(genreSelect);
+                });
+
+            fetch('/api/directors')
+                .then(response => response.json())
+                .then(data => {
+                    $("#predict-director").autocomplete({
+                        source: data,
+                        minLength: 2
+                    });
+                });
+
+            fetch('/api/stars')
+                .then(response => response.json())
+                .then(data => {
+                    $("#predict-star1").autocomplete({
+                        source: data,
+                        minLength: 2
+                    });
+                    $("#predict-star2").autocomplete({
+                        source: data,
+                        minLength: 2
+                    });
+                    $("#predict-star3").autocomplete({
+                        source: data,
+                        minLength: 2
+                    });
+                    $("#predict-star4").autocomplete({
+                        source: data,
+                        minLength: 2
+                    });
+                });
+
+            fetchAndDisplayData();
+            fetchTimeSeriesData();
+        });
+    </script>
+</body>
+</html>
