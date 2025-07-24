@@ -8,6 +8,17 @@
 
 A modern Flask web application for analyzing the Titanic dataset with interactive visualizations and machine learning predictions.
 
+## 📸 Dashboard Screenshots
+
+![Dashboard Part One](readme-assets/part_one.png)
+*Dashboard Overview and Analytics Section*
+
+![Dashboard Part Two](readme-assets/part_two.png)
+*Prediction Interface and Machine Learning Features*
+
+![Dashboard Part Three](readme-assets/part_three.png)
+*Clustering Analysis and Optimization Results*
+
 ## 🚀 Features
 
 - **Interactive Dashboard**: Modern UI with Bootstrap 5 and Chart.js
